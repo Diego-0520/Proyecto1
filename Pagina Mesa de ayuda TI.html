@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Mesa de Ayuda TI - UCompensar</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+  body { background-color: #f8f9fa; }
+  header {
+    background-color: #ff6600;
+    color: white;
+    text-align: center;
+    padding: 1rem;
+    font-weight: bold;
+    font-size: 1.5rem;
+  }
+  .card { margin-top: 1rem; border-radius: 10px; }
+  .badge-open { background-color: #ffc107; color: #212529; }
+  .badge-closed { background-color: #198754; }
+  .badge-pending { background-color: #0dcaf0; color: #212529; }
+  footer { text-align: center; padding: 1rem; background-color: #222; color: white; margin-top: 2rem; }
+  .respuesta { margin-top: 0.5rem; padding: 0.5rem; background-color: #e9ecef; border-radius: 5px; }
+  .form-section { background-color: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-top: 1rem; }
+  .ticket-actions button { margin-right: 5px; margin-top: 5px; }
+</style>
+</head>
+<body>
+<header>MESA DE AYUDA TI - UNIVERSIDAD UCOMPENSAR</header>
+
+<div class="container mt-4">
+
+  <!-- SELECCIONAR ROL -->
+  <div id="rolSection" class="text-center">
+    <h4>Selecciona tu rol para probar la demo</h4>
+    <button class="btn btn-primary w-100 my-2" onclick="setRol('Estudiante')">Estudiante</button>
+    <button class="btn btn-secondary w-100 my-2" onclick="setRol('Administrativo')">Administrativo</button>
+    <button class="btn btn-warning w-100 my-2" onclick="setRol('Administrador')">Administrador</button>
+  </div>
+
+  <!-- PANEL USUARIO -->
+  <div id="userPanel" style="display:none;">
+    <div class="form-section">
+      <h3 class="mb-3">Registrar nuevo caso</h3>
+      <input type="text" id="titulo" class="form-control mb-2" placeholder="Título del caso">
+      <textarea id="descripcion" class="form-control mb-2" placeholder="Describe el problema..."></textarea>
+      <select id="categoria" class="form-select mb-2">
+        <option value="">Seleccionar categoría</option>
+        <option>Red</option>
+        <option>Software</option>
+        <option>Hardware</option>
+        <option>Acceso</option>
+      </select>
+      <button id="enviarTicket" class="btn btn-success w-100">Enviar caso</button>
+    </div>
+
+    <h4 class="mt-4">Mis casos</h4>
+    <div id="listaTickets" class="mt-2"></div>
+
+    <button class="btn btn-danger mt-3" onclick="cerrarSesion()">Cerrar sesión</button>
+  </div>
+
+  <!-- PANEL ADMIN -->
+  <div id="adminPanel" style="display:none;">
+    <div class="form-section">
+      <h3>Gestión de Casos - Administrador</h3>
+
+      <div class="mb-3">
+        <label>Filtrar por estado:</label>
+        <select id="filtroEstado" class="form-select w-50 d-inline-block" onchange="renderAdminTickets()">
+          <option value="">Todos</option>
+          <option value="Abierto">Abierto</option>
+          <option value="Pendiente">Pendiente</option>
+          <option value="Cerrado">Cerrado</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label>Filtrar por categoría:</label>
+        <select id="filtroCategoria" class="form-select w-50 d-inline-block" onchange="renderAdminTickets()">
+          <option value="">Todas</option>
+          <option>Red</option><option>Software</option><option>Hardware</option><option>Acceso</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="ticketsAdmin" class="mt-3"></div>
+    <button class="btn btn-danger mt-3" onclick="cerrarSesion()">Cerrar sesión</button>
+  </div>
+
+</div>
+
+<footer>© 2025 Universidad UCompensar - Mesa de Ayuda TI</footer>
+
+<script>
+let rolActual = null;
+
+let tickets = [
+  { id: 1, titulo: "No puedo conectarme a la red WiFi", descripcion: "No conecta a la red.", categoria: "Red", usuario: "Estudiante", estado: "Abierto", respuestas: [] },
+  { id: 2, titulo: "Solicitud de software para administrativo", descripcion: "Necesito Office.", categoria: "Software", usuario: "Administrativo", estado: "Pendiente", respuestas: ["Se requiere aprobación TI"] }
+];
+
+function setRol(rol) {
+  rolActual = rol;
+  document.getElementById("rolSection").style.display = "none";
+  if (rol === "Administrador") mostrarAdmin();
+  else mostrarUsuario(rol);
+}
+
+function cerrarSesion() {
+  rolActual = null;
+  document.getElementById("rolSection").style.display = "block";
+  document.getElementById("userPanel").style.display = "none";
+  document.getElementById("adminPanel").style.display = "none";
+}
+
+// PANEL USUARIO
+function mostrarUsuario(rol) {
+  document.getElementById("userPanel").style.display = "block";
+  document.getElementById("adminPanel").style.display = "none";
+  actualizarListaUsuario();
+  document.getElementById("enviarTicket").onclick = () => {
+    const titulo = document.getElementById("titulo").value;
+    const descripcion = document.getElementById("descripcion").value;
+    const categoria = document.getElementById("categoria").value || "Sin categoría";
+    if (!titulo || !descripcion) return alert("Completa todos los campos");
+
+    tickets.push({ id: Date.now(), titulo, descripcion, categoria, usuario: rol, estado: "Abierto", respuestas: [] });
+
+    document.getElementById("titulo").value = "";
+    document.getElementById("descripcion").value = "";
+    actualizarListaUsuario();
+  };
+}
+
+function actualizarListaUsuario() {
+  const lista = document.getElementById("listaTickets");
+  lista.innerHTML = "";
+  tickets.filter(t => t.usuario === rolActual).forEach(t => {
+    let resHTML = t.respuestas.map(r => `<div class="respuesta">${r}</div>`).join('');
+    lista.innerHTML += `
+      <div class="card p-3">
+        <h5>${t.titulo}</h5>
+        <span class="badge ${t.estado === 'Abierto' ? 'badge-open' : t.estado === 'Cerrado' ? 'badge-closed' : 'badge-pending'}">${t.estado}</span>
+        <p>${t.descripcion}</p>
+        <small>Categoría: ${t.categoria}</small>
+        ${resHTML}
+      </div>`;
+  });
+}
+
+// PANEL ADMIN
+function mostrarAdmin() {
+  document.getElementById("userPanel").style.display = "none";
+  document.getElementById("adminPanel").style.display = "block";
+  renderAdminTickets();
+}
+
+function renderAdminTickets() {
+  const cont = document.getElementById("ticketsAdmin");
+  cont.innerHTML = "";
+  const filtroEstado = document.getElementById("filtroEstado").value;
+  const filtroCategoria = document.getElementById("filtroCategoria").value;
+
+  tickets.filter(t => (!filtroEstado || t.estado === filtroEstado) && (!filtroCategoria || t.categoria === filtroCategoria))
+  .forEach(t => {
+    let resHTML = t.respuestas.map((r,i) => `<div class="respuesta"><strong>Respuesta ${i+1}:</strong> ${r}</div>`).join('');
+    cont.innerHTML += `
+      <div class="card p-3">
+        <h5>${t.titulo}</h5>
+        <p>${t.descripcion}</p>
+        <p><strong>Usuario:</strong> ${t.usuario}</p>
+        <p><strong>Categoría:</strong> ${t.categoria}</p>
+        <p><strong>Estado:</strong> <span class="badge ${t.estado === 'Abierto' ? 'badge-open' : t.estado === 'Cerrado' ? 'badge-closed' : 'badge-pending'}">${t.estado}</span></p>
+
+        <div class="ticket-actions">
+          <select id="cat-${t.id}" class="form-select w-50 d-inline-block mb-2">
+            <option value="">Cambiar categoría</option>
+            <option>Red</option><option>Software</option><option>Hardware</option><option>Acceso</option>
+          </select>
+          <button class="btn btn-sm btn-success" onclick="actualizarCategoria(${t.id})">Actualizar</button><br>
+
+          <input type="text" id="resp-${t.id}" class="form-control mb-2 mt-2 w-75 d-inline-block" placeholder="Agregar respuesta">
+          <button class="btn btn-sm btn-info" onclick="agregarRespuesta(${t.id})">Responder</button><br>
+
+          <button class="btn btn-sm btn-primary" onclick="ponerEnEspera(${t.id})">Poner en espera</button>
+          <button class="btn btn-sm btn-danger" onclick="cerrarCaso(${t.id})">Cerrar caso</button>
+        </div>
+        ${resHTML}
+      </div>`;
+  });
+}
+
+// ACCIONES ADMIN
+function cerrarCaso(id) { tickets = tickets.map(t => t.id===id?{...t, estado:"Cerrado"}:t); renderAdminTickets(); }
+function ponerEnEspera(id) { tickets = tickets.map(t => t.id===id?{...t, estado:"Pendiente"}:t); renderAdminTickets(); }
+function actualizarCategoria(id) { 
+  const nueva = document.getElementById("cat-" + id).value; 
+  if (!nueva) return alert("Selecciona categoría");
+  tickets = tickets.map(t => t.id===id?{...t, categoria:nueva}:t); 
+  renderAdminTickets();
+}
+function agregarRespuesta(id) { 
+  const texto = document.getElementById(`resp-${id}`).value; 
+  if (!texto) return alert("Escribe una respuesta"); 
+  tickets = tickets.map(t => t.id===id?{...t, respuestas:[...t.respuestas,texto]}:t);
+  document.getElementById(`resp-${id}`).value = "";
+  renderAdminTickets();
+}
+</script>
+</body>
+</html>
